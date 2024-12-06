@@ -8,7 +8,6 @@ import (
 	"github.com/gorilla/pat"
 	"github.com/ian-kent/go-log/log"
 	"github.com/skyscooby/MailHog-Server/config"
-	"github.com/skyscooby/MailHog-Server/monkey"
 	"github.com/skyscooby/MailHog-Server/websockets"
 	"github.com/mailhog/data"
 )
@@ -36,12 +35,6 @@ func createAPIv2(conf *config.Config, r *pat.Router) *APIv2 {
 
 	r.Path(conf.WebPath + "/api/v2/search").Methods("GET").HandlerFunc(apiv2.search)
 	r.Path(conf.WebPath + "/api/v2/search").Methods("OPTIONS").HandlerFunc(apiv2.defaultOptions)
-
-	r.Path(conf.WebPath + "/api/v2/jim").Methods("GET").HandlerFunc(apiv2.jim)
-	r.Path(conf.WebPath + "/api/v2/jim").Methods("POST").HandlerFunc(apiv2.createJim)
-	r.Path(conf.WebPath + "/api/v2/jim").Methods("PUT").HandlerFunc(apiv2.updateJim)
-	r.Path(conf.WebPath + "/api/v2/jim").Methods("DELETE").HandlerFunc(apiv2.deleteJim)
-	r.Path(conf.WebPath + "/api/v2/jim").Methods("OPTIONS").HandlerFunc(apiv2.defaultOptions)
 
 	r.Path(conf.WebPath + "/api/v2/outgoing-smtp").Methods("GET").HandlerFunc(apiv2.listOutgoingSMTP)
 	r.Path(conf.WebPath + "/api/v2/outgoing-smtp").Methods("OPTIONS").HandlerFunc(apiv2.defaultOptions)
@@ -151,88 +144,6 @@ func (apiv2 *APIv2) search(w http.ResponseWriter, req *http.Request) {
 	b, _ := json.Marshal(res)
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(b)
-}
-
-func (apiv2 *APIv2) jim(w http.ResponseWriter, req *http.Request) {
-	log.Println("[APIv2] GET /api/v2/jim")
-
-	apiv2.defaultOptions(w, req)
-
-	if apiv2.config.Monkey == nil {
-		w.WriteHeader(404)
-		return
-	}
-
-	b, _ := json.Marshal(apiv2.config.Monkey)
-	w.Header().Add("Content-Type", "application/json")
-	w.Write(b)
-}
-
-func (apiv2 *APIv2) deleteJim(w http.ResponseWriter, req *http.Request) {
-	log.Println("[APIv2] DELETE /api/v2/jim")
-
-	apiv2.defaultOptions(w, req)
-
-	if apiv2.config.Monkey == nil {
-		w.WriteHeader(404)
-		return
-	}
-
-	apiv2.config.Monkey = nil
-}
-
-func (apiv2 *APIv2) createJim(w http.ResponseWriter, req *http.Request) {
-	log.Println("[APIv2] POST /api/v2/jim")
-
-	apiv2.defaultOptions(w, req)
-
-	if apiv2.config.Monkey != nil {
-		w.WriteHeader(400)
-		return
-	}
-
-	apiv2.config.Monkey = config.Jim
-
-	// Try, but ignore errors
-	// Could be better (e.g., ok if no json, error if badly formed json)
-	// but this works for now
-	apiv2.newJimFromBody(w, req)
-
-	w.WriteHeader(201)
-}
-
-func (apiv2 *APIv2) newJimFromBody(w http.ResponseWriter, req *http.Request) error {
-	var jim monkey.Jim
-
-	dec := json.NewDecoder(req.Body)
-	err := dec.Decode(&jim)
-
-	if err != nil {
-		return err
-	}
-
-	jim.ConfigureFrom(config.Jim)
-
-	config.Jim = &jim
-	apiv2.config.Monkey = &jim
-
-	return nil
-}
-
-func (apiv2 *APIv2) updateJim(w http.ResponseWriter, req *http.Request) {
-	log.Println("[APIv2] PUT /api/v2/jim")
-
-	apiv2.defaultOptions(w, req)
-
-	if apiv2.config.Monkey == nil {
-		w.WriteHeader(404)
-		return
-	}
-
-	err := apiv2.newJimFromBody(w, req)
-	if err != nil {
-		w.WriteHeader(400)
-	}
 }
 
 func (apiv2 *APIv2) listOutgoingSMTP(w http.ResponseWriter, req *http.Request) {

@@ -23,21 +23,12 @@ func Listen(cfg *config.Config, exitCh chan int) *net.TCPListener {
 			continue
 		}
 
-		if cfg.Monkey != nil {
-			ok := cfg.Monkey.Accept(conn)
-			if !ok {
-				conn.Close()
-				continue
-			}
-		}
-
 		go Accept(
 			conn.(*net.TCPConn).RemoteAddr().String(),
 			io.ReadWriteCloser(conn),
 			cfg.Storage,
 			cfg.MessageChan,
 			cfg.Hostname,
-			cfg.Monkey,
 		)
 	}
 }

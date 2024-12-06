@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/ian-kent/linkio"
-	"github.com/skyscooby/MailHog-Server/monkey"
 	"github.com/mailhog/data"
 	"github.com/mailhog/smtp"
 	"github.com/mailhog/storage"
@@ -27,11 +26,10 @@ type Session struct {
 
 	reader io.Reader
 	writer io.Writer
-	monkey monkey.ChaosMonkey
 }
 
 // Accept starts a new SMTP session using io.ReadWriteCloser
-func Accept(remoteAddress string, conn io.ReadWriteCloser, storage storage.Storage, messageChan chan *data.Message, hostname string, monkey monkey.ChaosMonkey) {
+func Accept(remoteAddress string, conn io.ReadWriteCloser, storage storage.Storage, messageChan chan *data.Message, hostname string) {
 	defer conn.Close()
 
 	proto := smtp.NewProtocol()
@@ -39,16 +37,8 @@ func Accept(remoteAddress string, conn io.ReadWriteCloser, storage storage.Stora
 	var link *linkio.Link
 	reader := io.Reader(conn)
 	writer := io.Writer(conn)
-	if monkey != nil {
-		linkSpeed := monkey.LinkSpeed()
-		if linkSpeed != nil {
-			link = linkio.NewLink(*linkSpeed * linkio.BytePerSecond)
-			reader = link.NewLinkReader(io.Reader(conn))
-			writer = link.NewLinkWriter(io.Writer(conn))
-		}
-	}
 
-	session := &Session{conn, proto, storage, messageChan, remoteAddress, false, "", link, reader, writer, monkey}
+	session := &Session{conn, proto, storage, messageChan, remoteAddress, false, "", link, reader, writer}
 	proto.LogHandler = session.logf
 	proto.MessageReceivedHandler = session.acceptMessage
 	proto.ValidateSenderHandler = session.validateSender
@@ -58,43 +48,19 @@ func Accept(remoteAddress string, conn io.ReadWriteCloser, storage storage.Stora
 
 	session.logf("Starting session")
 	session.Write(proto.Start())
-	for session.Read() == true {
-		if monkey != nil && monkey.Disconnect != nil && monkey.Disconnect() {
-			session.conn.Close()
-			break
-		}
-	}
+	for session.Read() == true {}
 	session.logf("Session ended")
 }
 
 func (c *Session) validateAuthentication(mechanism string, args ...string) (errorReply *smtp.Reply, ok bool) {
-	if c.monkey != nil {
-		ok := c.monkey.ValidAUTH(mechanism, args...)
-		if !ok {
-			// FIXME better error?
-			return smtp.ReplyUnrecognisedCommand(), false
-		}
-	}
 	return nil, true
 }
 
 func (c *Session) validateRecipient(to string) bool {
-	if c.monkey != nil {
-		ok := c.monkey.ValidRCPT(to)
-		if !ok {
-			return false
-		}
-	}
 	return true
 }
 
 func (c *Session) validateSender(from string) bool {
-	if c.monkey != nil {
-		ok := c.monkey.ValidMAIL(from)
-		if !ok {
-			return false
-		}
-	}
 	return true
 }
 
