@@ -7,8 +7,8 @@ import (
 	"log"
 
 	"github.com/ian-kent/envconf"
-	"github.com/mailhog/data"
-	"github.com/mailhog/storage"
+	data "github.com/skyscooby/MailHog-data"
+	storage "github.com/skyscooby/MailHog-storage"
 )
 
 // DefaultConfig is the default config

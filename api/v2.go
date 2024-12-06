@@ -9,7 +9,7 @@ import (
 	"github.com/ian-kent/go-log/log"
 	"github.com/skyscooby/MailHog-Server/config"
 	"github.com/skyscooby/MailHog-Server/websockets"
-	"github.com/mailhog/data"
+	data "github.com/skyscooby/MailHog-data"
 )
 
 // APIv2 implements version 2 of the MailHog API
